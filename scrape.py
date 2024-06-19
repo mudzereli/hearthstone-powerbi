@@ -23,7 +23,7 @@ FC = Fore.CYAN
 FB = Fore.BLUE
 FW = Fore.WHITE
 FM = Fore.MAGENTA
-FD = Fore.BLACK
+FX = Fore.BLACK
 SB = Style.BRIGHT
 SN = Style.NORMAL
 SD = Style.DIM
@@ -33,7 +33,7 @@ timestamp = datetime.now().strftime('%m/%d/%Y')
 # Print with Timestamp
 def tprint(message):
     tstamp = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
-    print(f'{SB}{FW}[{SD}{FD}{tstamp}{SB}{FW}] {SN}{message}')
+    print(f'{SB}{FW}[{SD}{FX}{tstamp}{SB}{FW}] {SN}{message}')
 
 # Exception Hook
 def show_exception_and_exit(exc_type, exc_value, tb):
