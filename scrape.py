@@ -13,6 +13,7 @@ import win32gui
 import win32process
 import win32con
 import sys
+import time
 
 # Set up Colors
 just_fix_windows_console()
@@ -81,6 +82,51 @@ class Deck:
         tprint(f'AllCards = {self.cardlist}')
         tprint(f'Link = {self.link}')
 
+
+# Function to scroll incrementally and capture decks
+def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, scroll_increment=2000, eocscroll=897):
+    last_height = driver.execute_script("return window.scrollY")
+    total_height = driver.execute_script("return document.body.scrollHeight")-eocscroll
+
+    while True:
+        # Capture current deck tiles
+        capture_deck_tiles(driver, decks)
+
+        # Scroll down by a small increment
+        driver.execute_script(f"window.scrollBy(0, {scroll_increment});")
+        time.sleep(scroll_pause_time)  # Wait for content to load
+
+        # Check if the new scroll height is the same as before (i.e., reached the end)
+        new_height = driver.execute_script("return window.scrollY")
+        #tprint(f'{FC}{SD}Scroll Height: last: {SB}{last_height}{SD} / new: {SB}{new_height}{SD} / total: {SB}{total_height}')
+        rj = len(str(total_height))
+        tprint(f'{SB}{FB}scroll height {FW}{str(new_height).rjust(rj)}{FB} of {FW}{total_height} {FB}{SN}/{SB}{FB} format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
+ 
+        if new_height == last_height:
+            break
+        last_height = new_height
+
+# Function to capture deck tiles
+def capture_deck_tiles(driver, decks):
+    deck_tiles = driver.find_elements(By.CLASS_NAME, "deck-tile")
+    for tile in deck_tiles:
+        deck = Deck()
+        deck.timestamp = timestamp
+        deck.format = gameformat
+        deck.rankrange = rankrange
+        deck.archetype = tile.find_element(By.CLASS_NAME, "deck-name").text
+        deck.link = tile.get_attribute("href")
+        deck.classname = tile.get_attribute("data-card-class")
+        deck.dust = tile.find_element(By.CLASS_NAME, "dust-cost").text
+        deck.winrate = tile.find_element(By.CLASS_NAME, "win-rate").text
+        deck.games = tile.find_element(By.CLASS_NAME, "game-count").text
+        deck.duration = tile.find_element(By.CLASS_NAME, 'duration').text
+        deck.cardlist = ''
+        for card in tile.find_elements(By.XPATH, ".//div/div[6]/ul/li/div/a/div"):
+            deck.cardlist += card.get_attribute("aria-label")
+            deck.cardlist += ";"
+        decks.append(deck)
+
 # Hook Exceptions to Not Close on Error
 sys.excepthook = show_exception_and_exit
 # Set up Variables
@@ -135,14 +181,14 @@ for url in urls:
     # Actually Wait for Page to Load
     try:
         # Using CSS_SELECTOR with a more robust selector that doesn't depend on dynamic class names
-        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, '#decks-container > main > div.page-with-banner-container > div > div > div > div > section > div.paging.text-center > nav > ul > li.visible-lg-inline.active'))
+        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, '#decks-container > main > div.deck-list-wrapper.page-with-banner-container > div > div:nth-child(2) > div > section > ul'))
         WebDriverWait(driver, timeout).until(element_present)
     except TimeoutException:
         tprint(f'Timed out waiting for page to load')
     # driver.implicitly_wait(implicit_wait_time)
     # Find Group Elements
     rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
-    lastUpdated = driver.find_element(By.XPATH, "//li[starts-with(normalize-space(),'Last updated')]/span[@class='infobox-value']/div[@class='tooltip-wrapper']/time").text
+    lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
     try:
         page_count = int(driver.find_element(By.CLASS_NAME, "pagination").find_elements(By.CLASS_NAME, "visible-lg-inline")[-1].text)
     except NoSuchElementException:
@@ -150,36 +196,10 @@ for url in urls:
     # Loop Through All Pages for Current Group
     tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
     tprint(f'{FM}Last Updated {FW}{lastUpdated}')
-    for p in range(1,page_count+1):
-        # Find Decks
-        deck_tiles = driver.find_elements(By.CLASS_NAME, "deck-tile")
-        # Loop Through Each Deck Tile
-        for tile in deck_tiles:
-            deck = Deck()
-            deck.timestamp = timestamp
-            deck.format = gameformat
-            deck.rankrange = rankrange
-            deck.archetype = tile.find_element(By.CLASS_NAME, "deck-name").text
-            deck.link = tile.get_attribute("href")
-            deck.classname = tile.get_attribute("data-card-class")
-            deck.dust = tile.find_element(By.CLASS_NAME, "dust-cost").text
-            deck.winrate = tile.find_element(By.CLASS_NAME, "win-rate").text
-            deck.games = tile.find_element(By.CLASS_NAME, "game-count").text
-            deck.duration = tile.find_element(By.CLASS_NAME, 'duration').text
-            deck.cardlist = ''
-            for card in tile.find_elements(By.XPATH, ".//div/div[6]/ul/li/div/a/div"):
-                deck.cardlist += card.get_attribute("aria-label")
-                deck.cardlist += ";"
-            #deck.tprint()
-            decks.append(deck)
-            rj = len(str(page_count))
-        tprint(f'{SB}{FB}page # {FW}{str(p).rjust(rj)}{FB} of {FW}{page_count} {FB}{SN}/{SB}{FB} format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
-        # Find and Click Next Page Button
-        try:
-            button = driver.find_element(By.XPATH, "//a[@class='weight-normal' and @title='Next page']")
-            button.click()
-        except NoSuchElementException:
-            tprint(FR + "Next Page not found... Moving On")
+
+
+    scroll_and_capture_decks_incrementally(driver, decks)  # Scroll incrementally and capture decks
+    tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 driver.quit()
 
 # Write Results to CSV
