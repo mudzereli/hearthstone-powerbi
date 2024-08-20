@@ -30,6 +30,9 @@ SN = Style.NORMAL
 SD = Style.DIM
 #timestamp = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
 timestamp = datetime.now().strftime('%m/%d/%Y')
+deck_load = 33 # number of decks loaded at a time
+deck_height = 86 # pixel height of each deck
+scroll_size = deck_load * deck_height # how much to scroll on each page
 
 # Print with Timestamp
 def tprint(message):
@@ -84,13 +87,15 @@ class Deck:
 
 
 # Function to scroll incrementally and capture decks
-def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, scroll_increment=2000, eocscroll=897):
+def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, scroll_increment=scroll_size, eocscroll=897):
     last_height = driver.execute_script("return window.scrollY")
     total_height = driver.execute_script("return document.body.scrollHeight")-eocscroll
 
     while True:
         # Capture current deck tiles
         capture_deck_tiles(driver, decks)
+        rj = len(str(total_height))
+        tprint(f'{SB}{FB}scroll: {FW}{str(last_height).rjust(rj)}{FB} of {FW}{total_height} {FB}{SN}/{SB}{FB} format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 
         # Scroll down by a small increment
         driver.execute_script(f"window.scrollBy(0, {scroll_increment});")
@@ -98,10 +103,6 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
 
         # Check if the new scroll height is the same as before (i.e., reached the end)
         new_height = driver.execute_script("return window.scrollY")
-        #tprint(f'{FC}{SD}Scroll Height: last: {SB}{last_height}{SD} / new: {SB}{new_height}{SD} / total: {SB}{total_height}')
-        rj = len(str(total_height))
-        tprint(f'{SB}{FB}scroll height {FW}{str(new_height).rjust(rj)}{FB} of {FW}{total_height} {FB}{SN}/{SB}{FB} format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
- 
         if new_height == last_height:
             break
         last_height = new_height
