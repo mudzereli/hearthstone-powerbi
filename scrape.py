@@ -110,6 +110,7 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
         if new_height == last_height:
             break
         last_height = new_height
+    return decks
 
 # Function to capture deck tiles
 def capture_deck_tiles(driver, decks):
@@ -217,7 +218,7 @@ for url in urls:
     tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
     tprint(f'{FM}Last Updated {FW}{lastUpdated}')
 
-    scroll_and_capture_decks_incrementally(driver, decks)  # Scroll incrementally and capture decks
+    decks = scroll_and_capture_decks_incrementally(driver, decks)  # Scroll incrementally and capture decks
     tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 driver.quit()
 
