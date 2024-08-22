@@ -46,7 +46,6 @@ def show_exception_and_exit(exc_type, exc_value, tb):
     input(f'{FR}ERROR: Press key to exit.{FW}')
     sys.exit(-1)
 
-# Class Definitions
 def get_window_handle(window_title):
     """
     Get the window handle by its title.
@@ -69,7 +68,7 @@ def get_bool(prompt):
         except KeyError:
            tprint(f'{FR}{SB}Invalid input please enter True or False!{SN}')
 
-# Define deck class
+# Class Definitions
 class Deck:
     def dump(self):
         tprint('---------------------------')
@@ -96,6 +95,11 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
         capture_deck_tiles(driver, decks)
         rj = len(str(total_height))
         tprint(f'{SB}{FB}scroll: {FW}{str(last_height).rjust(rj)}{FB} of {FW}{total_height} {FB}{SN}/{SB}{FB} format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
+
+        # Remove duplicates
+        decks, duplicates_count = remove_duplicates(decks)
+        if duplicates_count > 0:
+            tprint(f'{SB}{FC}duplicates removed: {FW}{duplicates_count}{SN}')
 
         # Scroll down by a small increment
         driver.execute_script(f"window.scrollBy(0, {scroll_increment});")
@@ -127,6 +131,21 @@ def capture_deck_tiles(driver, decks):
             deck.cardlist += card.get_attribute("aria-label")
             deck.cardlist += ";"
         decks.append(deck)
+
+# Function to remove duplicates from decks list
+def remove_duplicates(decks):
+    seen_links = set()
+    unique_decks = []
+    duplicates_count = 0
+
+    for deck in decks:
+        if deck.link not in seen_links:
+            seen_links.add(deck.link)
+            unique_decks.append(deck)
+        else:
+            duplicates_count += 1
+    
+    return unique_decks, duplicates_count
 
 # Hook Exceptions to Not Close on Error
 sys.excepthook = show_exception_and_exit
@@ -198,7 +217,6 @@ for url in urls:
     tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
     tprint(f'{FM}Last Updated {FW}{lastUpdated}')
 
-
     scroll_and_capture_decks_incrementally(driver, decks)  # Scroll incrementally and capture decks
     tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 driver.quit()
@@ -212,6 +230,7 @@ with open(csvpath, mode='w', newline='', encoding='utf-8') as file:
     # Write All Decks
     for deck in decks:
         writer.writerow([deck.timestamp, deck.format, deck.rankrange, deck.archetype, deck.classname, deck.winrate, deck.games, deck.duration, deck.dust, deck.cardlist, deck.link])
+
 # All Done!
 tprint(f'{FC}{SB}All Done! # of decks written: {FW}{len(decks)}{SN}')
 input(f'{FY}Press Enter key to close...')
