@@ -28,16 +28,17 @@ FX = Fore.BLACK
 SB = Style.BRIGHT
 SN = Style.NORMAL
 SD = Style.DIM
-#timestamp = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
 timestamp = datetime.now().strftime('%m/%d/%Y')
-deck_load = 33 # number of decks loaded at a time
-deck_height = 86 # pixel height of each deck
-scroll_size = deck_load * deck_height # how much to scroll on each page
+deck_load = 33  # number of decks loaded at a time
+deck_height = 86  # pixel height of each deck
+scroll_size = deck_load * deck_height  # how much to scroll on each page
+
 
 # Print with Timestamp
 def tprint(message):
     tstamp = datetime.now().strftime('%m/%d/%Y %H:%M:%S')
     print(f'{SB}{FW}[{SD}{FX}{tstamp}{SB}{FW}] {SN}{message}')
+
 
 # Exception Hook
 def show_exception_and_exit(exc_type, exc_value, tb):
@@ -46,12 +47,14 @@ def show_exception_and_exit(exc_type, exc_value, tb):
     input(f'{FR}ERROR: Press key to exit.{FW}')
     sys.exit(-1)
 
+
 def get_window_handle(window_title):
     """
     Get the window handle by its title.
     """
     handle = win32gui.FindWindow(None, window_title)
     return handle
+
 
 def bring_window_to_front(window_handle):
     """
@@ -60,13 +63,15 @@ def bring_window_to_front(window_handle):
     win32gui.ShowWindow(window_handle, win32con.SW_RESTORE)
     win32gui.SetForegroundWindow(window_handle)
 
+
 # Boolean Input Helper
 def get_bool(prompt):
     while True:
         try:
-           return {"true":True,"false":False,"yes":True,"no":False,"y":True,"n":False}[input(f'{prompt}').lower()]
+            return {"true": True, "false": False, "yes": True, "no": False, "y": True, "n": False}[input(f'{prompt}').lower()]
         except KeyError:
-           tprint(f'{FR}{SB}Invalid input please enter True or False!{SN}')
+            tprint(f'{FR}{SB}Invalid input please enter True or False!{SN}')
+
 
 # Class Definitions
 class Deck:
@@ -112,6 +117,7 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
         last_height = new_height
     return decks
 
+
 # Function to capture deck tiles
 def capture_deck_tiles(driver, decks):
     deck_tiles = driver.find_elements(By.CLASS_NAME, "deck-tile")
@@ -133,19 +139,18 @@ def capture_deck_tiles(driver, decks):
             deck.cardlist += ";"
         decks.append(deck)
 
+
 # Function to remove duplicates from decks list
 def remove_duplicates(decks):
     seen_links = set()
     unique_decks = []
     duplicates_count = 0
-
     for deck in decks:
         if deck.link not in seen_links:
             seen_links.add(deck.link)
             unique_decks.append(deck)
         else:
             duplicates_count += 1
-    
     return unique_decks, duplicates_count
 
 # Hook Exceptions to Not Close on Error
@@ -158,7 +163,7 @@ csvpath = "C:\\Users\\mudz\\Documents\\pyhsreplay.csv"
 fullread = get_bool(FC + "Read all Rank Ranges? " + FW)
 tprint(f'{FM}{SB}Reading All Rank Ranges: {FW}{fullread}{SN}')
 # Set up URLs
-urls = ["https://hsreplay.net/decks/","https://hsreplay.net/decks/#gameType=RANKED_WILD"]
+urls = ["https://hsreplay.net/decks/", "https://hsreplay.net/decks/#gameType=RANKED_WILD"]
 if fullread:
     urls.append("https://hsreplay.net/decks/#rankRange=GOLD")
     urls.append("https://hsreplay.net/decks/#rankRange=SILVER")
@@ -178,15 +183,8 @@ chrome_options.add_argument('--blink-settings=imagesEnabled=false')
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("user-data-dir=D:\\tmp\\Selenium")
 chrome_options.add_extension('C:\\Users\\mudz\\AppData\\Roaming\\Opera Software\\Opera GX Stable\\Extensions\\kccohkcpppjjkkjppopfnflnebibpida\\1.58.0_0.crx')
-#chrome_options.add_argument("--headless")
-#chrome_options.add_argument("--disable-ads")
-#chrome_options.add_argument("--disable-tracking")
 driver = webdriver.Chrome(options=chrome_options)
 driver.maximize_window()
-#if window_handle:
-#    bring_window_to_front(window_handle)
-#else:
-#    tprint(FR + "Window not found.")
 
 # Loop through URLs
 for url in urls:
@@ -195,10 +193,12 @@ for url in urls:
         gameformat = "Wild"
     else:
         gameformat = "Standard"
+
     # Load and Setup Website in Selenium
     tprint(f'{FC}Loading Website: {FW}{url}')
     driver.execute_script("window.history.pushState('', '', '/')")
     driver.get(url)
+
     # Actually Wait for Page to Load
     try:
         # Using CSS_SELECTOR with a more robust selector that doesn't depend on dynamic class names
@@ -206,19 +206,15 @@ for url in urls:
         WebDriverWait(driver, timeout).until(element_present)
     except TimeoutException:
         tprint(f'Timed out waiting for page to load')
-    # driver.implicitly_wait(implicit_wait_time)
+
     # Find Group Elements
     rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
     lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
-    try:
-        page_count = int(driver.find_element(By.CLASS_NAME, "pagination").find_elements(By.CLASS_NAME, "visible-lg-inline")[-1].text)
-    except NoSuchElementException:
-        page_count = 1
-    # Loop Through All Pages for Current Group
+
+    # Scrape all data for current Group
     tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
     tprint(f'{FM}Last Updated {FW}{lastUpdated}')
-
-    decks = scroll_and_capture_decks_incrementally(driver, decks)  # Scroll incrementally and capture decks
+    decks = scroll_and_capture_decks_incrementally(driver, decks)
     tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 driver.quit()
 
