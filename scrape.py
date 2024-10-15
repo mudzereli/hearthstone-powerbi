@@ -14,6 +14,7 @@ import win32process
 import win32con
 import sys
 import time
+import os
 
 # Set up Colors
 just_fix_windows_console()
@@ -158,7 +159,10 @@ sys.excepthook = show_exception_and_exit
 # Set up Variables
 tprint(f'{FY}{SB}Setting Up Variables{SN}')
 decks = []
-csvpath = "C:\\Users\\mudz\\Documents\\pyhsreplay.csv"
+# Get the directory where the script is located
+script_dir = os.path.dirname(__file__)
+# Create the full path for the CSV file in the same directory as the script
+csvpath = os.path.join(script_dir, "pyhsreplay.csv")
 # Prompt for Full Read
 fullread = get_bool(FC + "Read all Rank Ranges? " + FW)
 tprint(f'{FM}{SB}Reading All Rank Ranges: {FW}{fullread}{SN}')
