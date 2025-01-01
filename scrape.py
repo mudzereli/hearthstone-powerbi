@@ -121,26 +121,58 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
 
 # Function to capture deck tiles
 def capture_deck_tiles(driver, decks):
-    deck_tiles = driver.find_elements(By.CLASS_NAME, "deck-tile")
-    for tile in deck_tiles:
-        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "deck-tile")))
+    try:
+        # Wait for deck tiles to be present
+        deck_tiles = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.CLASS_NAME, "deck-tile"))
+        )
+        for tile in deck_tiles:
+            try:
+                deck = Deck()
+                deck.timestamp = timestamp
+                deck.format = gameformat
+                deck.rankrange = rankrange
 
-        deck = Deck()
-        deck.timestamp = timestamp
-        deck.format = gameformat
-        deck.rankrange = rankrange
-        deck.archetype = tile.find_element(By.CLASS_NAME, "deck-name").text
-        deck.link = tile.get_attribute("href")
-        deck.classname = tile.get_attribute("data-card-class")
-        deck.dust = tile.find_element(By.CLASS_NAME, "dust-cost").text
-        deck.winrate = tile.find_element(By.CLASS_NAME, "win-rate").text
-        deck.games = tile.find_element(By.CLASS_NAME, "game-count").text
-        deck.duration = tile.find_element(By.CLASS_NAME, 'duration').text
-        deck.cardlist = ''
-        for card in tile.find_elements(By.XPATH, ".//div/div[6]/ul/li/div/a/div"):
-            deck.cardlist += card.get_attribute("aria-label")
-            deck.cardlist += ";"
-        decks.append(deck)
+                # Use explicit waits for each element
+                deck.archetype = WebDriverWait(tile, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "deck-name"))
+                ).text
+
+                deck.link = tile.get_attribute("href")
+                deck.classname = tile.get_attribute("data-card-class")
+
+                deck.dust = WebDriverWait(tile, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "dust-cost"))
+                ).text
+
+                deck.winrate = WebDriverWait(tile, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "win-rate"))
+                ).text
+
+                deck.games = WebDriverWait(tile, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "game-count"))
+                ).text
+
+                deck.duration = WebDriverWait(tile, 5).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "duration"))
+                ).text
+
+                # Handle card list with explicit wait
+                cards = WebDriverWait(tile, 5).until(
+                    EC.presence_of_all_elements_located((By.XPATH, ".//div/div[6]/ul/li/div/a/div"))
+                )
+                deck.cardlist = ';'.join(card.get_attribute("aria-label") for card in cards if card.get_attribute("aria-label"))
+
+                decks.append(deck)
+
+            except (TimeoutException, StaleElementReferenceException) as e:
+                tprint(f'{FR}Failed to capture deck tile: {str(e)}{FW}')
+                continue
+
+    except TimeoutException:
+        tprint(f'{FR}Timeout waiting for deck tiles{FW}')
+
+    return decks
 
 
 # Function to remove duplicates from decks list
