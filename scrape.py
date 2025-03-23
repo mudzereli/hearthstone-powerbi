@@ -31,7 +31,7 @@ SB = Style.BRIGHT
 SN = Style.NORMAL
 SD = Style.DIM
 timestamp = datetime.now().strftime('%m/%d/%Y')
-deck_load = 33  # number of decks loaded at a time
+deck_load = 31  # number of decks loaded at a time
 deck_height = 86  # pixel height of each deck
 scroll_size = deck_load * deck_height  # how much to scroll on each page
 
@@ -127,6 +127,7 @@ def capture_deck_tiles(driver, decks):
         deck_tiles = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "deck-tile"))
         )
+        # tprint(f'{SB}{FM}# of deck tiles = {FW}{len(deck_tiles)}')
         for tile in deck_tiles:
             try:
                 deck = Deck()
