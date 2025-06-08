@@ -93,7 +93,7 @@ class Deck:
 
 
 # Function to scroll incrementally and capture decks
-def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, scroll_increment=scroll_size, eocscroll=897):
+def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=1, scroll_increment=scroll_size, eocscroll=897):
     last_height = driver.execute_script("return window.scrollY")
     total_height = driver.execute_script("return document.body.scrollHeight")-eocscroll
 
@@ -124,45 +124,30 @@ def scroll_and_capture_decks_incrementally(driver, decks, scroll_pause_time=0, s
 def capture_deck_tiles(driver, decks):
     try:
         # Wait for deck tiles to be present
-        deck_tiles = WebDriverWait(driver, 10).until(
+        deck_tiles = WebDriverWait(driver, 5).until(
             EC.presence_of_all_elements_located((By.CLASS_NAME, "deck-tile"))
         )
+        tile_count = len(deck_tiles)
         # tprint(f'{SB}{FM}# of deck tiles = {FW}{len(deck_tiles)}')
-        for tile in deck_tiles:
+        for i in range(tile_count):
             try:
+                # Refresh tile reference each time
+                tile = driver.find_elements(By.CLASS_NAME, "deck-tile")[i]
                 deck = Deck()
                 deck.timestamp = timestamp
                 deck.format = gameformat
                 deck.rankrange = rankrange
 
                 # Use explicit waits for each element
-                deck.archetype = WebDriverWait(tile, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "deck-name"))
-                ).text
-
+                deck.archetype = tile.find_element(By.CLASS_NAME, "deck-name").text
                 deck.link = tile.get_attribute("href")
                 deck.classname = tile.get_attribute("data-card-class")
-
-                deck.dust = WebDriverWait(tile, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "dust-cost"))
-                ).text
-
-                deck.winrate = WebDriverWait(tile, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "win-rate"))
-                ).text
-
-                deck.games = WebDriverWait(tile, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "game-count"))
-                ).text
-
-                deck.duration = WebDriverWait(tile, 5).until(
-                    EC.presence_of_element_located((By.CLASS_NAME, "duration"))
-                ).text
-
-                # Handle card list with explicit wait
-                cards = WebDriverWait(tile, 5).until(
-                    EC.presence_of_all_elements_located((By.XPATH, ".//div/div[6]/ul/li/div/a/div"))
-                )
+                deck.dust = tile.find_element(By.CLASS_NAME, "dust-cost").text
+                deck.winrate = tile.find_element(By.CLASS_NAME, "win-rate").text
+                deck.games = tile.find_element(By.CLASS_NAME, "game-count").text
+                deck.duration = tile.find_element(By.CLASS_NAME, "duration").text
+                cards = tile.find_elements(By.XPATH, ".//div/div[6]/ul/li/div/a/div")
+                
                 deck.cardlist = ';'.join(card.get_attribute("aria-label") for card in cards if card.get_attribute("aria-label"))
 
                 decks.append(deck)
@@ -244,18 +229,18 @@ for url in urls:
         # Using CSS_SELECTOR with a more robust selector that doesn't depend on dynamic class names
         element_present = EC.presence_of_element_located((By.CSS_SELECTOR, '#decks-container > main > div.deck-list-wrapper.page-with-banner-container > div > div:nth-child(2) > div > section > ul'))
         WebDriverWait(driver, timeout).until(element_present)
+
+        # Find Group Elements
+        rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
+        lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
+
+        # Scrape all data for current Group
+        tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
+        tprint(f'{FM}Last Updated {FW}{lastUpdated}')
+        decks = scroll_and_capture_decks_incrementally(driver, decks)
+        tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
     except TimeoutException:
         tprint(f'Timed out waiting for page to load')
-
-    # Find Group Elements
-    rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
-    lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
-
-    # Scrape all data for current Group
-    tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
-    tprint(f'{FM}Last Updated {FW}{lastUpdated}')
-    decks = scroll_and_capture_decks_incrementally(driver, decks)
-    tprint(f'{SB}{FB}format: {FW}{gameformat} {FB}{SN}/{SB}{FB} rank: {FW}{rankrange} {FB}{SN}/{SB}{FB} # of decks read: {FW}{len(decks)}{SN}')
 driver.quit()
 
 # Write Results to CSV
