@@ -32,7 +32,7 @@ SN = Style.NORMAL
 SD = Style.DIM
 timestamp = datetime.now().strftime('%m/%d/%Y')
 deck_load = 31  # number of decks loaded at a time
-deck_height = 86  # pixel height of each deck
+deck_height = 120  # pixel height of each deck
 scroll_size = deck_load * deck_height  # how much to scroll on each page
 
 
@@ -125,30 +125,39 @@ def capture_deck_tiles(driver, decks):
     try:
         # Wait for deck tiles to be present
         deck_tiles = WebDriverWait(driver, 5).until(
-            EC.presence_of_all_elements_located((By.CLASS_NAME, "deck-tile"))
+            EC.presence_of_all_elements_located((By.ID, "deck-tile"))
         )
         tile_count = len(deck_tiles)
         # tprint(f'{SB}{FM}# of deck tiles = {FW}{len(deck_tiles)}')
         for i in range(tile_count):
             try:
                 # Refresh tile reference each time
-                tile = driver.find_elements(By.CLASS_NAME, "deck-tile")[i]
+                tile = driver.find_elements(By.ID, "deck-tile")[i]
                 deck = Deck()
                 deck.timestamp = timestamp
                 deck.format = gameformat
                 deck.rankrange = rankrange
 
                 # Use explicit waits for each element
-                deck.archetype = tile.find_element(By.CLASS_NAME, "deck-name").text
+                deck.archetype = tile.find_element(By.ID, "deck-name").text
                 deck.link = tile.get_attribute("href")
                 deck.classname = tile.get_attribute("data-card-class")
-                deck.dust = tile.find_element(By.CLASS_NAME, "dust-cost").text
-                deck.winrate = tile.find_element(By.CLASS_NAME, "win-rate").text
-                deck.games = tile.find_element(By.CLASS_NAME, "game-count").text
-                deck.duration = tile.find_element(By.CLASS_NAME, "duration").text
-                cards = tile.find_elements(By.XPATH, ".//div/div[6]/ul/li/div/a/div")
-                
+                deck.dust = tile.find_element(By.ID, "dust-cost").text
+                try:
+                    deck.winrate = tile.find_element(By.ID, "win-rate").text
+                except NoSuchElementException:
+                    deck.winrate = '0.0%'
+                try:
+                    deck.games = tile.find_element(By.ID, "game-count").text
+                except NoSuchElementException:
+                    deck.games = '1'
+                try:
+                    deck.duration = tile.find_element(By.ID, "deck-duration").text
+                except NoSuchElementException:
+                    deck.duration = '0.0 min'
+                cards = tile.find_elements(By.CLASS_NAME, "card-icon")
                 deck.cardlist = ';'.join(card.get_attribute("aria-label") for card in cards if card.get_attribute("aria-label"))
+                # tprint(deck.cardlist)
 
                 decks.append(deck)
 
@@ -227,12 +236,26 @@ for url in urls:
     # Actually Wait for Page to Load
     try:
         # Using CSS_SELECTOR with a more robust selector that doesn't depend on dynamic class names
-        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, '#decks-container > main > div.deck-list-wrapper.page-with-banner-container > div > div:nth-child(2) > div > section > ul'))
+        element_present = EC.presence_of_element_located((By.CSS_SELECTOR, '#deck-content > ul > li'))
         WebDriverWait(driver, timeout).until(element_present)
 
         # Find Group Elements
-        rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
-        lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
+        try:
+            rankrange = driver.find_element(By.CSS_SELECTOR, "#rank-range-filter > div > ul > li.selectable.selected.no-deselect").text
+        except NoSuchElementException:
+            if "#rankRange=GOLD" in url:
+                rankrange = "Gold"
+            elif "#rankRange=SILVER" in url:
+                rankrange = "Silver"
+            elif "#rankRange=BRONZE" in url:
+                rankrange = "Bronze"
+            else:
+                rankrange = "Bronze through Gold"
+
+        try:
+            lastUpdated = driver.find_element(By.XPATH, "//*[@id=\"side-bar-data\"]/dl/div/dd/div/time").text
+        except NoSuchElementException:
+            lastUpdated = "Today"
 
         # Scrape all data for current Group
         tprint(f'{FG}Starting Scrape of {FW}{gameformat}{FG} - {FW}{rankrange}{FG} Data')
