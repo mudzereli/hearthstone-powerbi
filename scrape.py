@@ -156,9 +156,16 @@ def capture_deck_tiles(driver, decks):
                 except NoSuchElementException:
                     deck.duration = '0.0 min'
                 cards = tile.find_elements(By.CLASS_NAME, "card-icon")
-                deck.cardlist = ';'.join(card.get_attribute("aria-label") for card in cards if card.get_attribute("aria-label"))
-                # tprint(deck.cardlist)
-
+                valid_cards = []
+                for card in cards:
+                    aria_label = card.get_attribute("aria-label")
+                    style = card.get_attribute("style")
+                    if aria_label and style:
+                        if style != "height: 28px; width: 28px;":
+                            valid_cards.append(aria_label)
+                        else:
+                            tprint(f'Skipping Bad Card: {aria_label}')
+                deck.cardlist = ';'.join(valid_cards)
                 decks.append(deck)
 
             except (TimeoutException, StaleElementReferenceException) as e:
