@@ -128,6 +128,7 @@ def capture_deck_tiles(driver, decks):
             EC.presence_of_all_elements_located((By.ID, "deck-tile"))
         )
         tile_count = len(deck_tiles)
+        skipped_cards = []
         # tprint(f'{SB}{FM}# of deck tiles = {FW}{len(deck_tiles)}')
         for i in range(tile_count):
             try:
@@ -164,14 +165,15 @@ def capture_deck_tiles(driver, decks):
                         if style != "height: 28px; width: 28px;":
                             valid_cards.append(aria_label)
                         else:
-                            tprint(f'Skipping Bad Card: {aria_label}')
+                            skipped_cards.append(aria_label)
+                            # tprint(f'Skipping Bad Card: {aria_label}')
                 deck.cardlist = ';'.join(valid_cards)
                 decks.append(deck)
 
             except (TimeoutException, StaleElementReferenceException) as e:
                 tprint(f'{FR}Failed to capture deck tile: {str(e)}{FW}')
                 continue
-
+        tprint(f'{SN}{FY}skipped cards: {FW}{skipped_cards}')
     except TimeoutException:
         tprint(f'{FR}Timeout waiting for deck tiles{FW}')
 
